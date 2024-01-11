@@ -1,0 +1,22 @@
+# Use an official Golang runtime as a parent image
+FROM golang:1.21.4
+
+# Set the working directory in the container
+WORKDIR /go/src/app
+
+# Copy the local package files to the container's workspace
+COPY . .
+
+# Download and install any required third-party dependencies into the container.
+#RUN go get -u github.com/gorilla/mux
+RUN go get -u github.com/go-sql-driver/mysql
+RUN go get -u github.com/sirupsen/logrus
+
+# Build the Go application
+RUN go build -o main .
+
+# Expose port 8080 to the outside world
+EXPOSE 8080
+
+# Command to run the application with environment variables
+CMD ["./main"]
