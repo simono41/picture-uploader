@@ -4,9 +4,17 @@ import (
 	"fmt"
 	_ "html/template"
 	"io"
-        "log"
+	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
+)
+
+var (
+	lastUploadTime time.Time
+	mu             sync.Mutex
+	uploadInterval = 10 * time.Second
 )
 
 func main() {
@@ -25,6 +33,15 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if time.Since(lastUploadTime) < uploadInterval {
+		http.Error(w, "Nur alle 10 Sekunden erlaubt", http.StatusTooManyRequests)
+		log.Printf("Bildupload zu häufig. Nur alle 10 Sekunden erlaubt.")
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		file, handler, err := r.FormFile("image")
 		if err != nil {
@@ -51,7 +68,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-                // Erfolgsmeldung mit dem Link ausgeben
+		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
+
+		// Erfolgsmeldung mit dem Link ausgeben
 		link := fmt.Sprintf("Bild erfolgreich hochgeladen. Sie können es hier anzeigen: <a href='/view/%s'>Anzeigen</a>", handler.Filename)
 
 		// Schreiben Sie den Link als HTML in die Antwort
