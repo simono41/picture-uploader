@@ -49,6 +49,24 @@ The application should be accessible at [http://localhost:8080](http://localhost
 
 Modify the `docker-compose.yml` file to adjust environment variables, ports, or any other configurations as needed.
 
+## Upload via Terminal
+
+    ~~~
+    curl -X POST -F "image=@/pfad/zur/datei/bild.jpg" http://localhost:8080/upload
+    ~~~
+
+Ersetzen Sie /pfad/zur/datei/bild.jpg durch den tatsächlichen Pfad zu Ihrer Datei und http://localhost:8080/upload durch die URL Ihres Servers und den Endpunkt für den Dateiupload.
+
+Hier ist eine Erläuterung der Optionen, die in der Curl-Anfrage verwendet werden:
+
+    ~~~
+    -X POST: Legt die HTTP-Methode auf POST fest, was in diesem Fall verwendet wird, um die Datei hochzuladen.
+    -F "image=@/pfad/zur/datei/bild.jpg": Teilt Curl mit, dass es sich um ein Formular-Upload handelt (-F), und gibt den Namen des Formularfelds (“image”) sowie den Dateipfad (@/pfad/zur/datei/bild.jpg) an.
+    http://localhost:8080/upload: Die URL des Servers und des Endpunkts, an den die Datei hochgeladen werden soll.
+    ~~~
+
+Führen Sie diese Curl-Anfrage in einem Terminal aus, und die Datei wird an den angegebenen Server hochgeladen.
+
 ## Additional Information
 
 - This project uses NGINX as a reverse proxy. Ensure that the required networks (`nginx-proxy` and `edge`) are set up externally or adjust the `docker-compose.yml` accordingly.

@@ -1,16 +1,16 @@
-# syntax=docker/dockerfile:1                                                               
-                                                                                           
-# Build the application from source                                                        
-FROM golang:1.21.4 AS build-stage                                                          
-                                                                                           
-WORKDIR /app                                                                               
-                                                                                           
-COPY go.mod go.sum ./                                                                      
-RUN go mod download                                                                        
-                                                                                           
-COPY *.go ./                                                                               
-                                                                                           
-RUN CGO_ENABLED=0 GOOS=linux go build -o /picture-uploader
+# syntax=docker/dockerfile:1
+
+# Build the application from source
+FROM golang:1.21.4 AS build-stage
+
+WORKDIR /app
+
+COPY *.mod ./
+RUN go mod download
+
+COPY *.go ./
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /main
 
 # Run the tests in the container
 FROM build-stage AS run-test-stage
@@ -21,10 +21,10 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 
 WORKDIR /
 
-COPY --from=build-stage /picture-uploader /picture-uploader
+COPY --from=build-stage /main /main
 
 EXPOSE 8080
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/picture-uploader"]
+ENTRYPOINT ["/main"]
