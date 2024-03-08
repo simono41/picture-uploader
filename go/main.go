@@ -21,6 +21,7 @@ var (
 func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/upload", uploadHandler)
+	http.HandleFunc("/image/", imageHandler)
 	http.HandleFunc("/view/", viewHandler)
 
 	fmt.Println("Server listening on :8080")
@@ -153,7 +154,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func viewHandler(w http.ResponseWriter, r *http.Request) {
+func imageHandler(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Path[len("/view/"):]
 	imagePath := "./uploads/" + filePath
 
@@ -171,5 +172,37 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	if copyErr != nil {
 		log.Printf("Fehler beim Senden des Bildes: %v", copyErr)
 		return
+	}
+}
+
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := r.URL.Path[len("/view/"):]
+	imagePath := "./uploads/" + filePath
+
+	// Überprüfen, ob die Bilddatei existiert
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		http.Error(w, "Bild nicht gefunden", http.StatusNotFound)
+		log.Printf("Bild nicht gefunden: %v", err)
+		return
+	}
+
+	// Verwenden von html/template zur sicheren Ausgabe von HTML
+	tmpl, err := template.ParseFiles("templates/viewImage.html")
+	if err != nil {
+		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+		log.Printf("Fehler beim Laden des Templates: %v", err)
+		return
+	}
+
+	data := struct {
+		Filename string
+	}{
+		Filename: filePath,
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+		log.Printf("Fehler beim Rendern des Templates: %v", err)
 	}
 }
