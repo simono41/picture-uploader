@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	_ "html/template"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -27,9 +28,26 @@ func main() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	// Hier können Sie eine HTML-Templatedatei für die Homepage erstellen
-	// und sie mit template.Execute laden.
-	fmt.Fprint(w, "Willkommen! Besuchen Sie /upload, um Bilder hochzuladen.")
+        // Setzen der Content Security Policy
+        w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+
+	// Verwenden von html/template zur sicheren Ausgabe von HTML
+    	tmpl, err := template.ParseFiles("templates/homeTemplate.html")
+    	if err != nil {
+        	http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+        	return
+    	}
+
+    	data := struct {
+        	Title string
+    	}{
+        	Title: "Bildupload",
+    	}
+
+    	err = tmpl.Execute(w, data)
+	if err != nil {
+        	http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+	}
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +69,30 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
+		// Überprüfen Sie den MIME-Typ der Datei
+		buffer := make([]byte, 512) // Genug für die Erkennung des MIME-Typs
+		_, err = file.Read(buffer)
+		if err != nil {
+			http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
+			log.Printf("Fehler beim Lesen der Datei für MIME-Typ-Erkennung: %v", err)
+			return
+		}
+
+		mimeType := http.DetectContentType(buffer)
+		if !strings.HasPrefix(mimeType, "image/") {
+			http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
+			log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
+			return
+		}
+
+		// Zurücksetzen des Dateizeigers, um die Datei vollständig zu kopieren
+		_, err = file.Seek(0, io.SeekStart)
+		if err != nil {
+			http.Error(w, "Fehler beim Zurücksetzen des Dateizeigers", http.StatusInternalServerError)
+			log.Printf("Fehler beim Zurücksetzen des Dateizeigers: %v", err)
+			return
+		}
+
 		// Hier können Sie den Dateinamen manipulieren oder einen anderen Speicherort wählen
 		uploadPath := "./uploads/" + handler.Filename
 		f, err := os.Create(uploadPath)
@@ -70,21 +112,44 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
 
-		// Erfolgsmeldung mit dem Link ausgeben
-		link := fmt.Sprintf("Bild erfolgreich hochgeladen. Sie können es hier anzeigen: <a href='/view/%s'>Anzeigen</a>", handler.Filename)
+		// Nach erfolgreichem Upload:
+    		tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
+    		if err != nil {
+        		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+        		log.Printf("Fehler beim Laden des Templates: %v", err)
+        		return
+    		}
 
-		// Schreiben Sie den Link als HTML in die Antwort
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, link)
+    		data := struct {
+        		Message  string
+        		Filename string
+		}{
+        		Message:  "Bild erfolgreich hochgeladen.",
+        		Filename: handler.Filename,
+    		}
+
+    		err = tmpl.Execute(w, data)
+    		if err != nil {
+        		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+        		log.Printf("Fehler beim Rendern des Templates: %v", err)
+        		return
+    		}
+
 	} else {
-		// HTML-Formular für Bild-Upload hier anzeigen
-		form := `<html><body>
-					<form action="/upload" method="post" enctype="multipart/form-data">
-						<input type="file" name="image">
-						<input type="submit" value="Hochladen">
-					</form>
-				</body></html>`
-		fmt.Fprint(w, form)
+
+        	tmpl, err := template.ParseFiles("templates/uploadForm.html")
+        	if err != nil {
+            		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+            		log.Printf("Fehler beim Laden des Templates: %v", err)
+            		return
+        	}
+
+        	err = tmpl.Execute(w, nil)
+        	if err != nil {
+            		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+            		log.Printf("Fehler beim Rendern des Templates: %v", err)
+        	    	return
+	        }
 	}
 }
 
