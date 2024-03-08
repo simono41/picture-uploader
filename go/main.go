@@ -52,6 +52,9 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	// Setzen der Content Security Policy
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -155,6 +158,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func imageHandler(w http.ResponseWriter, r *http.Request) {
+	// Setzen der Content Security Policy
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+
 	// Extrahieren des Bildnamens aus dem URL-Pfad
 	imagePath := "./uploads/" + r.URL.Path[len("/image/"):]
 
@@ -175,6 +181,9 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
+	// Setzen der Content Security Policy
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+
 	filePath := r.URL.Path[len("/view/"):]
 	imagePath := "./uploads/" + filePath
 
