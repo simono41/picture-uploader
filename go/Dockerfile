@@ -1,14 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # Build the application from source
-FROM golang:1.21.4 AS build-stage
+FROM golang:1.20.10 AS build-stage
 
 WORKDIR /app
 
-COPY *.mod ./
+COPY * ./
 RUN go mod download
-
-COPY *.go ./
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /main
 
