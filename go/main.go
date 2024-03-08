@@ -21,32 +21,32 @@ var (
 func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/upload", uploadHandler)
-        http.HandleFunc("/view/", viewHandler)
+	http.HandleFunc("/view/", viewHandler)
 
 	fmt.Println("Server listening on :8080")
 	http.ListenAndServe(":8080", nil)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-        // Setzen der Content Security Policy
-        w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+	// Setzen der Content Security Policy
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
 
 	// Verwenden von html/template zur sicheren Ausgabe von HTML
-    	tmpl, err := template.ParseFiles("templates/homeTemplate.html")
-    	if err != nil {
-        	http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-        	return
-    	}
-
-    	data := struct {
-        	Title string
-    	}{
-        	Title: "Bildupload",
-    	}
-
-    	err = tmpl.Execute(w, data)
+	tmpl, err := template.ParseFiles("templates/homeTemplate.html")
 	if err != nil {
-        	http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Title string
+	}{
+		Title: "Bildupload",
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
 	}
 }
 
@@ -113,43 +113,43 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
 
 		// Nach erfolgreichem Upload:
-    		tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
-    		if err != nil {
-        		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-        		log.Printf("Fehler beim Laden des Templates: %v", err)
-        		return
-    		}
+		tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
+		if err != nil {
+			http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+			log.Printf("Fehler beim Laden des Templates: %v", err)
+			return
+		}
 
-    		data := struct {
-        		Message  string
-        		Filename string
+		data := struct {
+			Message  string
+			Filename string
 		}{
-        		Message:  "Bild erfolgreich hochgeladen.",
-        		Filename: handler.Filename,
-    		}
+			Message:  "Bild erfolgreich hochgeladen.",
+			Filename: handler.Filename,
+		}
 
-    		err = tmpl.Execute(w, data)
-    		if err != nil {
-        		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
-        		log.Printf("Fehler beim Rendern des Templates: %v", err)
-        		return
-    		}
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+			log.Printf("Fehler beim Rendern des Templates: %v", err)
+			return
+		}
 
 	} else {
 
-        	tmpl, err := template.ParseFiles("templates/uploadForm.html")
-        	if err != nil {
-            		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-            		log.Printf("Fehler beim Laden des Templates: %v", err)
-            		return
-        	}
+		tmpl, err := template.ParseFiles("templates/uploadForm.html")
+		if err != nil {
+			http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+			log.Printf("Fehler beim Laden des Templates: %v", err)
+			return
+		}
 
-        	err = tmpl.Execute(w, nil)
-        	if err != nil {
-            		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
-            		log.Printf("Fehler beim Rendern des Templates: %v", err)
-        	    	return
-	        }
+		err = tmpl.Execute(w, nil)
+		if err != nil {
+			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+			log.Printf("Fehler beim Rendern des Templates: %v", err)
+			return
+		}
 	}
 }
 
