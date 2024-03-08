@@ -155,24 +155,23 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func imageHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := r.URL.Path[len("/view/"):]
-	imagePath := "./uploads/" + filePath
+    // Extrahieren des Bildnamens aus dem URL-Pfad
+    imagePath := "./uploads/" + r.URL.Path[len("/image/"):]
 
-	// Öffnen und Lesen der Bilddatei
-	imageFile, err := os.Open(imagePath)
-	if err != nil {
-		http.Error(w, "Bild nicht gefunden", http.StatusNotFound)
-		log.Printf("Fehler beim Öffnen des Bildes: %v", err)
-		return
-	}
-	defer imageFile.Close()
+    // Stellen Sie sicher, dass das Bild existiert
+    if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+        http.Error(w, "Bild nicht gefunden", http.StatusNotFound)
+        log.Printf("Bild nicht gefunden: %v", err)
+        return
+    }
 
-	// Kopieren des Bildes in die HTTP-Antwort
-	_, copyErr := io.Copy(w, imageFile)
-	if copyErr != nil {
-		log.Printf("Fehler beim Senden des Bildes: %v", copyErr)
-		return
-	}
+    // Setzen der korrekten MIME-Type basierend auf der Dateiendung
+    // Optional, verbessert aber die Kompatibilität
+    mimeType := "image/jpeg" // Standardwert; könnte dynamisch basierend auf der Dateiendung festgelegt werden
+    w.Header().Set("Content-Type", mimeType)
+
+    // Ausliefern des Bildes
+    http.ServeFile(w, r, imagePath)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
