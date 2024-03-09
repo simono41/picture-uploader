@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -162,22 +164,47 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
 
 	// Extrahieren des Bildnamens aus dem URL-Pfad
-	imagePath := "./uploads/" + r.URL.Path[len("/image/"):]
+	imagePath := r.URL.Path[len("/image/"):]
+
+	// Reinigen des Pfades, um Directory Traversal zu verhindern
+	cleanedPath := path.Clean("/uploads/" + imagePath)
+
+	// Generieren des absoluten Pfads zum uploads-Verzeichnis
+	uploadsDir, err := filepath.Abs("./uploads")
+	if err != nil {
+		http.Error(w, "Interner Serverfehler", http.StatusInternalServerError)
+		log.Printf("Fehler beim Ermitteln des absoluten Pfads des uploads-Verzeichnisses: %v", err)
+		return
+	}
+
+	// Generieren des absoluten Pfads zur angeforderten Datei
+	absImagePath, err := filepath.Abs(cleanedPath)
+	if err != nil {
+		http.Error(w, "Interner Serverfehler", http.StatusInternalServerError)
+		log.Printf("Fehler beim Ermitteln des absoluten Pfads des Bildes: %v", err)
+		return
+	}
+
+	// Sicherstellen, dass das Bild im uploads-Verzeichnis liegt
+	if !strings.HasPrefix(absImagePath, uploadsDir) {
+		http.Error(w, "Zugriff verweigert", http.StatusForbidden)
+		log.Printf("Versuch, auf Datei außerhalb des uploads-Verzeichnisses zuzugreifen: %v", absImagePath)
+		return
+	}
 
 	// Stellen Sie sicher, dass das Bild existiert
-	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+	if _, err := os.Stat(absImagePath); os.IsNotExist(err) {
 		http.Error(w, "Bild nicht gefunden", http.StatusNotFound)
 		log.Printf("Bild nicht gefunden: %v", err)
 		return
 	}
 
 	// Setzen der korrekten MIME-Type basierend auf der Dateiendung
-	// Optional, verbessert aber die Kompatibilität
 	mimeType := "image/jpeg" // Standardwert; könnte dynamisch basierend auf der Dateiendung festgelegt werden
 	w.Header().Set("Content-Type", mimeType)
 
 	// Ausliefern des Bildes
-	http.ServeFile(w, r, imagePath)
+	http.ServeFile(w, r, absImagePath)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
