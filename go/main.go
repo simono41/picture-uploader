@@ -85,7 +85,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		mimeType := http.DetectContentType(buffer)
-		if !strings.HasPrefix(mimeType, "image/") {
+		if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
 			http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
 			log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
 			return
@@ -159,6 +159,20 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Funktion zur Ermittlung des MIME-Types basierend auf der Dateiendung
+func getMimeType(filePath string) string {
+	switch filepath.Ext(filePath) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".svg":
+		return "image/svg+xml"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 func imageHandler(w http.ResponseWriter, r *http.Request) {
 	// Setzen der Content Security Policy
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
@@ -200,7 +214,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Setzen der korrekten MIME-Type basierend auf der Dateiendung
-	mimeType := "image/jpeg" // Standardwert; könnte dynamisch basierend auf der Dateiendung festgelegt werden
+	mimeType := getMimeType(imagePath)
 	w.Header().Set("Content-Type", mimeType)
 
 	// Ausliefern des Bildes
