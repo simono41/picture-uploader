@@ -76,8 +76,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Setzen der Content Security Policy
-	//w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
-	//w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'; object-src 'none';", nonce))
 	w.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'self' 'nonce-%s';", nonce))
 
 	mu.Lock()

@@ -15,21 +15,9 @@
 
     <script src="/static/js/script.js" nonce="{{.Nonce}}"></script>
 
-    <!-- <script type="text/javascript" nonce="{{.Nonce}}">
-        function kopiereURL() {
-            // Finde das Textfeld mit der URL
-            var copyText = document.getElementById("imageURL");
-            // Wähle den Text innerhalb des Textfeldes
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); // Für mobile Geräte
-
-            // Versuche, den Text ins Clipboard zu kopieren
-            navigator.clipboard.writeText(copyText.value).then(function() {
-                console.log('Kopieren in die Zwischenablage erfolgreich.');
-            }, function(err) {
-                console.error('Fehler beim Kopieren in die Zwischenablage: ', err);
-            });
-        }
-    </script> -->
+    <script nonce="{{.Nonce}}">
+        // Rufen Sie hier Ihre Funktion auf
+        kopiereURL();
+    </script>
 </body>
 </html>
