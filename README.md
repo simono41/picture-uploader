@@ -51,7 +51,7 @@ Modify the `docker-compose.yml` file to adjust environment variables, ports, or 
 
 ## Upload via Terminal
 
-    curl -X POST -F "image=@/pfad/zur/datei/bild.jpg" http://localhost:8080/upload
+    curl -X POST -F „image=@/tmp/network-home.svg“ -F „force_name=true“ https://pick.brothertec.eu/upload
 
 Ersetzen Sie /pfad/zur/datei/bild.jpg durch den tatsächlichen Pfad zu Ihrer Datei und http://localhost:8080/upload durch die URL Ihres Servers und den Endpunkt für den Dateiupload.
 
