@@ -19,6 +19,7 @@ services:
     volumes: 
       - ./uploads:/uploads
       - ./templates:/templates
+      - ./static:/static
 
     restart: always
 

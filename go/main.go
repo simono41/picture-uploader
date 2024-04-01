@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+        "crypto/rand"
+        "encoding/base64"
 )
 
 var (
@@ -25,6 +27,9 @@ func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/image/", imageHandler)
 	http.HandleFunc("/view/", viewHandler)
+        // Statischen Dateipfad setzen
+        fs := http.FileServer(http.Dir("static"))
+        http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	fmt.Println("Server listening on :8080")
 	http.ListenAndServe(":8080", nil)
@@ -53,9 +58,28 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func generateNonce() (string, error) {
+    nonceBytes := make([]byte, 16) // 16 Bytes generieren eine ausreichend lange Zeichenfolge für den Nonce
+    if _, err := rand.Read(nonceBytes); err != nil {
+        return "", err // Im Fehlerfall, geben Sie den Fehler zurück
+    }
+    return base64.StdEncoding.EncodeToString(nonceBytes), nil
+}
+
+
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
+        nonce, err := generateNonce()
+    if err != nil {
+        // Fehlerbehandlung, z.B. Senden eines Serverfehlers
+        http.Error(w, "Serverfehler", http.StatusInternalServerError)
+        log.Printf("Fehler beim Generieren des Nonce: %v", err)
+        return
+    }
+
 	// Setzen der Content Security Policy
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+        //w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+        //w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'; object-src 'none';", nonce))
+        w.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'self' 'nonce-%s';", nonce))
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -139,9 +163,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		data := struct {
 			Message  string
 			Filename string
+                        Nonce    string
 		}{
 			Message:  "Bild erfolgreich hochgeladen.",
 			Filename: filename, // Geändert, um den möglicherweise modifizierten Dateinamen anzuzeigen
+                        Nonce:    nonce,
 		}
 
 		err = tmpl.Execute(w, data)

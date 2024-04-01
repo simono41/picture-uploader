@@ -5,7 +5,31 @@
 </head>
 <body>
     <p>{{.Message}}</p>
-    <a href="/view/{{.Filename}}">Ihr Bild anzeigen</a>
+    <!-- Anzeigen des Links zum Bild, um es zu betrachten -->
+    <p><a href="/view/{{.Filename}}" target="_blank">Ihr Bild anzeigen</a></p>
+    <!-- Eingabefeld mit der URL des Bildes -->
+    <input type="text" value="https://pick.brothertec.eu/view/{{.Filename}}" id="imageURL" readonly>
+    <!-- Button, um die URL zu kopieren -->
+    <button id="copyButton">URL kopieren</button>
     <p><a href="/upload">Zurück zum Upload</a></p>
+
+    <script src="/static/js/script.js" nonce="{{.Nonce}}"></script>
+
+    <!-- <script type="text/javascript" nonce="{{.Nonce}}">
+        function kopiereURL() {
+            // Finde das Textfeld mit der URL
+            var copyText = document.getElementById("imageURL");
+            // Wähle den Text innerhalb des Textfeldes
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // Für mobile Geräte
+
+            // Versuche, den Text ins Clipboard zu kopieren
+            navigator.clipboard.writeText(copyText.value).then(function() {
+                console.log('Kopieren in die Zwischenablage erfolgreich.');
+            }, function(err) {
+                console.error('Fehler beim Kopieren in die Zwischenablage: ', err);
+            });
+        }
+    </script> -->
 </body>
 </html>
