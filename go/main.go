@@ -126,9 +126,12 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		if forceName == "true" {
 			filename = handler.Filename
 		} else {
+			// Extrahiere nur die Dateiendung
+			fileExtension := filepath.Ext(handler.Filename)
+
 			// Zeitstempel zum Dateinamen hinzufügen
 			timestamp := time.Now().Format("20060102-150405")
-			filename = fmt.Sprintf("%s-%s", timestamp, handler.Filename)
+			filename = fmt.Sprintf("%s%s", timestamp, fileExtension)
 		}
 
 		// Datei speichern
