@@ -5,7 +5,11 @@
 </head>
 <body>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="image">
+        <input type="file" name="image" required>
+        <br>
+        <input type="checkbox" name="force_name" value="true">
+        <label for="force_name">Originalnamen beibehalten (Force Name)</label>
+        <br>
         <input type="submit" value="Hochladen">
     </form>
 </body>

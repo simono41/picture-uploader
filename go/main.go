@@ -54,109 +54,118 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	// Setzen der Content Security Policy
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
+    // Setzen der Content Security Policy
+    w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
 
-	mu.Lock()
-	defer mu.Unlock()
+    mu.Lock()
+    defer mu.Unlock()
 
-	if time.Since(lastUploadTime) < uploadInterval {
-		http.Error(w, "Nur alle 10 Sekunden erlaubt", http.StatusTooManyRequests)
-		log.Printf("Bildupload zu häufig. Nur alle 10 Sekunden erlaubt.")
-		return
-	}
+    if time.Since(lastUploadTime) < uploadInterval {
+        http.Error(w, "Nur alle 10 Sekunden erlaubt", http.StatusTooManyRequests)
+        log.Printf("Bildupload zu häufig. Nur alle 10 Sekunden erlaubt.")
+        return
+    }
 
-	if r.Method == http.MethodPost {
-		file, handler, err := r.FormFile("image")
-		if err != nil {
-			http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
-			log.Printf("Fehler beim Lesen der Datei: %v", err)
-			return
-		}
-		defer file.Close()
+    if r.Method == http.MethodPost {
+        file, handler, err := r.FormFile("image")
+        if err != nil {
+            http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
+            log.Printf("Fehler beim Lesen der Datei: %v", err)
+            return
+        }
+        defer file.Close()
 
-		// Überprüfen Sie den MIME-Typ der Datei
-		buffer := make([]byte, 512) // Genug für die Erkennung des MIME-Typs
-		_, err = file.Read(buffer)
-		if err != nil {
-			http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
-			log.Printf("Fehler beim Lesen der Datei für MIME-Typ-Erkennung: %v", err)
-			return
-		}
+        // Überprüfen Sie den MIME-Typ der Datei
+        buffer := make([]byte, 512) // Genug für die Erkennung des MIME-Typs
+        _, err = file.Read(buffer)
+        if err != nil {
+            http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
+            log.Printf("Fehler beim Lesen der Datei für MIME-Typ-Erkennung: %v", err)
+            return
+        }
 
-		mimeType := http.DetectContentType(buffer)
-		if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
-			http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
-			log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
-			return
-		}
+        mimeType := http.DetectContentType(buffer)
+        if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
+            http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
+            log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
+            return
+        }
 
-		// Zurücksetzen des Dateizeigers, um die Datei vollständig zu kopieren
-		_, err = file.Seek(0, io.SeekStart)
-		if err != nil {
-			http.Error(w, "Fehler beim Zurücksetzen des Dateizeigers", http.StatusInternalServerError)
-			log.Printf("Fehler beim Zurücksetzen des Dateizeigers: %v", err)
-			return
-		}
+        _, err = file.Seek(0, io.SeekStart)
+        if err != nil {
+            http.Error(w, "Fehler beim Zurücksetzen des Dateizeigers", http.StatusInternalServerError)
+            log.Printf("Fehler beim Zurücksetzen des Dateizeigers: %v", err)
+            return
+        }
 
-		// Hier können Sie den Dateinamen manipulieren oder einen anderen Speicherort wählen
-		uploadPath := "./uploads/" + handler.Filename
-		f, err := os.Create(uploadPath)
-		if err != nil {
-			http.Error(w, "Fehler beim Erstellen der Datei", http.StatusInternalServerError)
-			log.Printf("Fehler beim Erstellen der Datei: %v", err)
-			return
-		}
-		defer f.Close()
+        // Ermitteln, ob der ursprüngliche Dateiname erzwungen werden soll
+        //forceName := r.Header.Get("Force-Name")
+        forceName := r.FormValue("force_name")
+        var filename string
+        if forceName == "true" {
+            filename = handler.Filename
+        } else {
+            // Zeitstempel zum Dateinamen hinzufügen
+            timestamp := time.Now().Format("20060102-150405")
+            filename = fmt.Sprintf("%s-%s", timestamp, handler.Filename)
+        }
 
-		_, copyErr := io.Copy(f, file)
-		if copyErr != nil {
-			http.Error(w, "Fehler beim Kopieren der Datei", http.StatusInternalServerError)
-			log.Printf("Fehler beim Kopieren der Datei: %v", copyErr)
-			return
-		}
+        // Datei speichern
+        uploadPath := "./uploads/" + filename
+        f, err := os.Create(uploadPath)
+        if err != nil {
+            http.Error(w, "Fehler beim Erstellen der Datei", http.StatusInternalServerError)
+            log.Printf("Fehler beim Erstellen der Datei: %v", err)
+            return
+        }
+        defer f.Close()
 
-		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
+        _, copyErr := io.Copy(f, file)
+        if copyErr != nil {
+            http.Error(w, "Fehler beim Kopieren der Datei", http.StatusInternalServerError)
+            log.Printf("Fehler beim Kopieren der Datei: %v", copyErr)
+            return
+        }
 
-		// Nach erfolgreichem Upload:
-		tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
-		if err != nil {
-			http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Laden des Templates: %v", err)
-			return
-		}
+        lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
 
-		data := struct {
-			Message  string
-			Filename string
-		}{
-			Message:  "Bild erfolgreich hochgeladen.",
-			Filename: handler.Filename,
-		}
+        tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
+        if err != nil {
+            http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+            log.Printf("Fehler beim Laden des Templates: %v", err)
+            return
+        }
 
-		err = tmpl.Execute(w, data)
-		if err != nil {
-			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Rendern des Templates: %v", err)
-			return
-		}
+        data := struct {
+            Message  string
+            Filename string
+        }{
+            Message:  "Bild erfolgreich hochgeladen.",
+            Filename: filename, // Geändert, um den möglicherweise modifizierten Dateinamen anzuzeigen
+        }
 
-	} else {
+        err = tmpl.Execute(w, data)
+        if err != nil {
+            http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+            log.Printf("Fehler beim Rendern des Templates: %v", err)
+            return
+        }
 
-		tmpl, err := template.ParseFiles("templates/uploadForm.html")
-		if err != nil {
-			http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Laden des Templates: %v", err)
-			return
-		}
+    } else {
+        tmpl, err := template.ParseFiles("templates/uploadForm.html")
+        if err != nil {
+            http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+            log.Printf("Fehler beim Laden des Templates: %v", err)
+            return
+        }
 
-		err = tmpl.Execute(w, nil)
-		if err != nil {
-			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Rendern des Templates: %v", err)
-			return
-		}
-	}
+        err = tmpl.Execute(w, nil)
+        if err != nil {
+            http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+            log.Printf("Fehler beim Rendern des Templates: %v", err)
+            return
+        }
+    }
 }
 
 // Funktion zur Ermittlung des MIME-Types basierend auf der Dateiendung
