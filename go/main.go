@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -156,29 +157,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
 
-		tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
-		if err != nil {
-			http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Laden des Templates: %v", err)
+		// Vor dem Template-Rendering prüfen, ob eine JSON-Antwort erwartet wird
+		responseType := r.URL.Query().Get("responseType")
+		if responseType == "json" {
+			jsonResponse(w, nonce, filename)
 			return
 		}
 
-		data := struct {
-			Message  string
-			Filename string
-			Nonce    string
-		}{
-			Message:  "Bild erfolgreich hochgeladen.",
-			Filename: filename, // Geändert, um den möglicherweise modifizierten Dateinamen anzuzeigen
-			Nonce:    nonce,
-		}
-
-		err = tmpl.Execute(w, data)
-		if err != nil {
-			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
-			log.Printf("Fehler beim Rendern des Templates: %v", err)
-			return
-		}
+		// Template-Rendering-Logik, wenn keine JSON-Antwort erwartet wird
+		renderTemplate(w, nonce, filename)
 
 	} else {
 		tmpl, err := template.ParseFiles("templates/uploadForm.html")
@@ -195,6 +182,49 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func jsonResponse(w http.ResponseWriter, nonce string, filename string) {
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Message  string `json:"message"`
+		Filename string `json:"filename"`
+		Nonce    string `json:"nonce"`
+	}{
+		Message:  "Bild erfolgreich hochgeladen.",
+		Filename: filename,
+		Nonce:    nonce,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+func renderTemplate(w http.ResponseWriter, nonce string, filename string) {
+	// Implementierung des Template-Renderings
+	tmpl, err := template.ParseFiles("templates/uploadSuccess.html")
+	if err != nil {
+		http.Error(w, "Fehler beim Laden des Templates", http.StatusInternalServerError)
+		log.Printf("Fehler beim Laden des Templates: %v", err)
+		return
+	}
+
+	data := struct {
+		Message  string
+		Filename string
+		Nonce    string
+	}{
+		Message:  "Bild erfolgreich hochgeladen.",
+		Filename: filename, // Geändert, um den möglicherweise modifizierten Dateinamen anzuzeigen
+		Nonce:    nonce,
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
+		log.Printf("Fehler beim Rendern des Templates: %v", err)
+		return
+	}
+
 }
 
 // Funktion zur Ermittlung des MIME-Types basierend auf der Dateiendung
