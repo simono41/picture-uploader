@@ -245,6 +245,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	// Setzen der Content Security Policy
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';")
 
+	// Überprüfen, ob der Pfad mit einem "/" endet (was auf ein Verzeichnis hinweisen könnte)
+	// und ob es eine Dateiendung gibt (was darauf hindeutet, dass es eine spezifische Datei ist).
+	if strings.HasSuffix(r.URL.Path, "/") && !strings.Contains(r.URL.Path, ".") {
+		http.Error(w, "Zugriff verweigert", http.StatusForbidden)
+		log.Printf("Versuch, auf Ordner außerhalb des uploads-Verzeichnisses zuzugreifen")
+		return
+	}
+
 	// Extrahieren des Bildnamens aus dem URL-Pfad
 	imagePath := r.URL.Path[len("/image/"):]
 
