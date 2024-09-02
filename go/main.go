@@ -23,16 +23,7 @@ var (
 	uploadInterval = 10 * time.Second
 )
 
-const (
-	uploadDir       = "./uploads"
-	cleanupInterval = 1 * time.Hour
-	fileLifetime    = 48 * time.Hour
-)
-
 func main() {
-	// Starten Sie den Hintergrundprozess zum Löschen alter Dateien
-	go startCleanupProcess()
-
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/image/", imageHandler)
@@ -43,39 +34,6 @@ func main() {
 
 	fmt.Println("Server listening on :8080")
 	http.ListenAndServe(":8080", nil)
-}
-
-func startCleanupProcess() {
-	ticker := time.NewTicker(cleanupInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			cleanupOldFiles()
-		}
-	}
-}
-
-func cleanupOldFiles() {
-	now := time.Now()
-	err := filepath.Walk(uploadDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && now.Sub(info.ModTime()) > fileLifetime {
-			err := os.Remove(path)
-			if err != nil {
-				log.Printf("Fehler beim Löschen der Datei %s: %v", path, err)
-			} else {
-				log.Printf("Datei gelöscht: %s", path)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		log.Printf("Fehler beim Durchsuchen des Verzeichnisses: %v", err)
-	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
