@@ -144,11 +144,14 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		mimeType := http.DetectContentType(buffer)
-		if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
-			http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
-			log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
-			return
+		forceUpload := r.FormValue("force_upload")
+		if forceUpload != "true" {
+			mimeType := http.DetectContentType(buffer)
+			if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
+				http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
+				log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
+				return
+			}
 		}
 
 		_, err = file.Seek(0, io.SeekStart)
@@ -158,7 +161,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		forceUpload := r.FormValue("force_upload")
 		forceName := r.FormValue("force_name")
 
 		var filename string
