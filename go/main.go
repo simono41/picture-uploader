@@ -70,15 +70,12 @@ func generateNonce() (string, error) {
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	nonce, err := generateNonce()
 	if err != nil {
-		// Fehlerbehandlung, z.B. Senden eines Serverfehlers
 		http.Error(w, "Serverfehler", http.StatusInternalServerError)
 		log.Printf("Fehler beim Generieren des Nonce: %v", err)
 		return
 	}
 
-	// Setzen der Content Security Policy
 	w.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'self' 'nonce-%s';", nonce))
-
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -97,8 +94,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		// Überprüfen Sie den MIME-Typ der Datei
-		buffer := make([]byte, 512) // Genug für die Erkennung des MIME-Typs
+		buffer := make([]byte, 512)
 		_, err = file.Read(buffer)
 		if err != nil {
 			http.Error(w, "Fehler beim Lesen der Datei", http.StatusInternalServerError)
@@ -106,14 +102,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		forceUpload := r.FormValue("force_upload")
-		if forceUpload != "true" {
-			mimeType := http.DetectContentType(buffer)
-			if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
-				http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
-				log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
-				return
-			}
+		mimeType := http.DetectContentType(buffer)
+		if !strings.HasPrefix(mimeType, "image/") && !strings.HasPrefix(mimeType, "text/xml") && !strings.HasPrefix(mimeType, "image/svg+xml") {
+			http.Error(w, "Nur Bild-Uploads sind erlaubt", http.StatusBadRequest)
+			log.Printf("Versuch, eine Nicht-Bild-Datei hochzuladen: %v", mimeType)
+			return
 		}
 
 		_, err = file.Seek(0, io.SeekStart)
@@ -123,23 +116,26 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Ermitteln, ob der ursprüngliche Dateiname erzwungen werden soll
-		//forceName := r.Header.Get("Force-Name")
+		forceUpload := r.FormValue("force_upload")
 		forceName := r.FormValue("force_name")
+
 		var filename string
 		if forceName == "true" {
 			filename = handler.Filename
 		} else {
-			// Extrahiere nur die Dateiendung
 			fileExtension := filepath.Ext(handler.Filename)
-
-			// Zeitstempel zum Dateinamen hinzufügen
 			timestamp := time.Now().Format("20060102-150405")
 			filename = fmt.Sprintf("%s%s", timestamp, fileExtension)
 		}
 
-		// Datei speichern
 		uploadPath := "./uploads/" + filename
+
+		if _, err := os.Stat(uploadPath); err == nil && forceUpload != "true" {
+			http.Error(w, "Datei existiert bereits. Überschreiben nicht erlaubt.", http.StatusConflict)
+			log.Printf("Versuch, bestehende Datei ohne force_upload zu überschreiben: %v", filename)
+			return
+		}
+
 		f, err := os.Create(uploadPath)
 		if err != nil {
 			http.Error(w, "Fehler beim Erstellen der Datei", http.StatusInternalServerError)
@@ -155,18 +151,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		lastUploadTime = time.Now() // Setzen Sie die Zeit des letzten Uploads
-
-		// Vor dem Template-Rendering prüfen, ob eine JSON-Antwort erwartet wird
+		lastUploadTime = time.Now()
 		responseType := r.URL.Query().Get("responseType")
 		if responseType == "json" {
 			jsonResponse(w, nonce, filename)
 			return
 		}
-
-		// Template-Rendering-Logik, wenn keine JSON-Antwort erwartet wird
 		renderTemplate(w, nonce, filename)
-
 	} else {
 		tmpl, err := template.ParseFiles("templates/uploadForm.html")
 		if err != nil {
@@ -174,12 +165,10 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Fehler beim Laden des Templates: %v", err)
 			return
 		}
-
 		err = tmpl.Execute(w, nil)
 		if err != nil {
 			http.Error(w, "Fehler beim Rendern des Templates", http.StatusInternalServerError)
 			log.Printf("Fehler beim Rendern des Templates: %v", err)
-			return
 		}
 	}
 }
